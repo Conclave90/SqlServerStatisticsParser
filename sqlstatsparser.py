@@ -19,6 +19,8 @@ total_elapsed_time = 0
 total_physical_reads = 0
 total_read_aheads = 0
 
+table_dictionary = {}
+
 for line in content:
 
     match = re.search("CPU time = \d+ ms", line)
@@ -35,8 +37,6 @@ for line in content:
         logical_reads_text = match.group(0)
         logical_reads_regex = re.search("\d+", logical_reads_text)
         logical_reads_value = logical_reads_regex.group(0)
-
-        print(line)
 
         total_logical_reads += int(logical_reads_value)
 
@@ -67,8 +67,24 @@ for line in content:
 
         total_elapsed_time += int(elapsed_time_value)
 
+    match = re.search("Table \'(.+)\'", line)        
+    if match is not None:
+        table_name = match.group(0)
+        
+        table_name_match = re.search("Table \'#(.+)\'", table_name)
+        if table_name_match is None:
+            if table_name in table_dictionary:
+                table_dictionary[table_name] = int(table_dictionary[table_name]) + int(logical_reads_value)
+            else:
+                table_dictionary[table_name] = int(logical_reads_value)
+
 print("CPU time: " + str(total_cpu_time) + " ms")
 print("Logical reads: " + str(total_logical_reads))
 print("Physical reads: " + str(total_physical_reads))
 print("Read aheads: " + str(total_read_aheads))
 print("Elapsed time: " + str(total_elapsed_time) + " ms")
+
+
+sorted_table_dictionary = sorted(table_dictionary.items(), key=lambda item: item[1])[::-1]
+for table_stat in sorted_table_dictionary:
+   print(table_stat[0] + ": " + str(table_stat[1]))
